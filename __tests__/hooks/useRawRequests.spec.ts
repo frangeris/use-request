@@ -1,5 +1,5 @@
 import { useRawRequest } from "@/index";
-import Service from "@/service";
+import Service from "@/core/service";
 
 global.fetch = jest.fn(() => ({
   status: 200,
@@ -21,20 +21,20 @@ describe("useRawRequest", () => {
 
   it("should make a GET request", async () => {
     const raw = useRawRequest();
-    const { status } = await raw("http://api.test.com").get();
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").get();
+    expect(res?.status).toBe(200);
   });
 
   it("should make a POST request", async () => {
     const raw = useRawRequest();
-    const { status } = await raw("http://api.test.com").post({});
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").post({});
+    expect(res?.status).toBe(200);
   });
 
   it("should make a PUT request", async () => {
     const raw = useRawRequest();
-    const { status } = await raw("http://api.test.com").put({});
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").put({});
+    expect(res?.status).toBe(200);
   });
 });
 
@@ -46,29 +46,29 @@ describe("useRawRequest: http methods", () => {
   });
 
   it("should make a GET request", async () => {
-    const { status } = await raw("http://api.test.com").get();
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").get();
+    expect(res?.status).toBe(200);
   });
 
   it("should make a POST request", async () => {
-    const { status } = await raw("http://api.test.com").post({});
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").post({});
+    expect(res?.status).toBe(200);
   });
 
   it("should make a PUT request", async () => {
-    const { status } = await raw("http://api.test.com").put({});
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").put({});
+    expect(res?.status).toBe(200);
   });
 
   it("should make a DELETE request", async () => {
-    const { status } = await raw("http://api.test.com").delete();
-    expect(status).toBe(200);
+    const res = await raw("http://api.test.com").delete();
+    expect(res?.status).toBe(200);
   });
 
   it("should make a PATCH request", async () => {
-    const { status } = await raw("http://api.test.com").patch([
+    const res = await raw("http://api.test.com").patch([
       { op: "add", path: "/test", value: "test" },
     ]);
-    expect(status).toBe(200);
+    expect(res?.status).toBe(200);
   });
 });

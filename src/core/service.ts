@@ -1,22 +1,20 @@
-import { RequestPath, ServiceConfig, ServiceResponse } from "./types";
-import Options from "./options";
+import { RequestPath, ServiceConfig, ServiceResponse } from "@/types";
+import Config from "@/global/config";
 
 export class Service<P> {
   private resource?: string;
   private controller: AbortController;
-  private config?: ServiceConfig;
 
-  constructor(resource?: string, config: ServiceConfig = { bypass: false }) {
+  constructor(resource?: string) {
     if (resource) {
       this.resource = resource;
     }
 
-    this.config = config;
     this.controller = new AbortController();
   }
 
   private buildUrl(path?: RequestPath<P>): string {
-    const ESCAPED_COLON = "__ESCAPED_COLON__";
+    const ESCAPED = "___ESCAPED___";
 
     // when no resource, a raw request
     let url = this.resource ?? "";
@@ -38,15 +36,10 @@ export class Service<P> {
     }
 
     // replace path parameters
-    url = url.replace(/\\:/g, ESCAPED_COLON);
+    url = url.replace(/\\:/g, ESCAPED);
     const toReplace = params as { [k: string]: string | number };
     for (const k in toReplace) {
       url = url.replace(`:${k}`, toReplace[k].toString());
-    }
-
-    // still missing parameters not replaced
-    if (/:(\w+)/.test(url)) {
-      throw Error(`Missing path parameters`);
     }
 
     if (query) {
@@ -55,19 +48,24 @@ export class Service<P> {
       url += `?${decodeURIComponent(qs.toString())}`;
     }
 
+    // check for missing params
+    const missingParams = url.match(/:[a-zA-Z0-9]+/g);
+    if (missingParams) {
+      throw new Error(`Missing parameters ${missingParams.join(", ")}`);
+    }
+
     // remove escaped
-    return url.replace(ESCAPED_COLON, ":");
+    return url.replace(ESCAPED, ":");
   }
 
   private buildRequest(req: RequestInit & { path?: RequestPath<P> }): Request {
     let baseURL = "";
-    const { headers } = Options.instance();
+    const { baseURL: initialURL, headers, useBaseURL } = Config.instance();
 
     // for normal requests (not raw), base url is required
-    if (!this.config?.bypass) {
-      const { baseURL: initialURL } = Options.instance();
+    if (useBaseURL) {
       if (!initialURL) {
-        throw new Error("Missing baseURL in options");
+        throw new Error("Missing `baseURL` url in options");
       }
       baseURL = initialURL;
     }
@@ -83,7 +81,11 @@ export class Service<P> {
     return request;
   }
 
-  private buildResponse<T>(res: Response) {
+  private buildResponse<T>(res: Response | null) {
+    if (!res) {
+      return new Response(null, { status: 500 }) as ServiceResponse<T>;
+    }
+
     // gets populated only when acceded
     Object.defineProperty(res, "data", {
       get() {
@@ -103,10 +105,24 @@ export class Service<P> {
     return res as ServiceResponse<T>;
   }
 
-  private makeRequest(req: Request): Promise<Response> {
-    const opts = Options.instance() as RequestInit;
+  private async makeRequest(req: Request): Promise<Response | null> {
+    const { interceptors, headers } = Config.instance();
+    let res = null;
 
-    return fetch(req, opts);
+    try {
+      res = await fetch(req, { headers });
+      if (interceptors?.onResponse) {
+        interceptors.onResponse(res);
+      }
+    } catch (err) {
+      interceptors?.onError?.(res!);
+
+      // if (this.config?.throwOnError) {
+      //   throw err;
+      // }
+    }
+
+    return res;
   }
 
   // HTTP methods

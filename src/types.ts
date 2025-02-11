@@ -1,4 +1,4 @@
-import { Service } from "./service";
+import { Service } from "@/core/service";
 
 export type InitOptions = {
   baseURL: string;
@@ -26,11 +26,22 @@ export type ExtractParams<T> =
     ? ExtractParams<Rest>
     : {};
 
-export type ServiceConfig = {
-  bypass?: boolean;
+export type ServiceMap = Record<string, Service<unknown>>;
+
+export type ServiceInterceptors = {
+  onError?: (response: Response) => void;
+  onRequest?: (request: Request) => void;
+  onResponse?: (response: Response) => void;
 };
 
-export type InitConfig = {
+export interface ServiceConfig {
+  baseURL: string;
   endpoints: Record<string, string>;
-  options?: RequestInit;
+  interceptors?: ServiceInterceptors;
+  headers?: Headers;
+  useBaseURL?: boolean;
+}
+
+export type Context = {
+  useRequests: { services: ServiceMap; config: ServiceConfig };
 };
